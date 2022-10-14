@@ -1,0 +1,108 @@
+-- studentdb 존재하면 제거할 것
+drop database if exists studentdb;
+-- studentdb database 생성
+create database studentdb;
+-- studentdb 데이터 사용선언
+use studentdb;
+-- student table 만들것
+create table student(
+	no char(6) not null primary key,
+    name char(10) not null,
+    kor tinyint not null,
+    eng tinyint not null,
+    math tinyint not null,
+    total smallint null,
+    avr decimal(5,2) null,
+    grade varchar(2) null,
+    rate int null default 0
+);
+-- trigger
+create table deleteStudent(
+	no char(6) not null,
+    name char(10) not null,
+    kor tinyint not null,
+    eng tinyint not null,
+    math tinyint not null,
+    total smallint null,
+    avr decimal(5,2) null,
+    grade varchar(2) null,
+    rate int null,
+    deleteDate datetime
+);
+-- set index : name
+create index idx_student_name on student(name);
+
+-- 1) student 삽입명령어
+insert into student values('10101', '홍길동', 100, 100, 100, 300, 100.00, 'A', 0);
+insert into student values('10102', '구길동', 100, 100, 100, 300, 100.00, 'A', 0);
+insert into student values('10103', '저길동', 100, 100, 100, 300, 100.00, 'A', 0);
+insert into student values('10104', '사길동', 100, 100, 100, 300, 100.00, 'A', 0);
+insert into student(no, name, kor, eng, math, total, avr, grade)
+					values('10105', '이길동', 100, 100, 100, 300, 100.00, 'A');
+-- 2) student 삭제명령어
+-- delete from student where no = '10101';
+-- 3) student 수정명령어
+update student set kor = 60, eng = 60, math = 60, total = 180, avr = 60.00, grade = 'D' where no = '10104';
+-- 4) student 정렬명령어
+select * from student order by no asc;
+-- 5) student 출력명령어
+select * from student;
+select * from student where name like '%길동%';
+-- 6) maximum, minimum
+-- select * from student order by total desc limit 1;
+-- select max(total) from student;
+select * from student where total = (select max(total) from student); -- subquery
+select * from student where total = (select min(total) from student);
+select * from student where total = (select max(kor) from student);
+-- procedure(total, avg, grade)
+drop procedure if exists procedure_insert_student;
+delimiter $$
+create procedure procedure_insert_student(
+	IN in_no char(6),
+	IN in_name char(10),
+	IN in_kor tinyint,
+	IN in_eng tinyint,
+	IN in_math tinyint
+)
+begin
+	-- total, avg, grade
+    declare in_total smallint default 0;
+    declare in_avr double default 0.0;
+    declare in_grade varchar(2) default null;
+    -- calTotal
+    set in_total = in_kor + in_eng + in_math;
+    -- calAvr
+    set in_avr = in_total / 3.0;
+    -- calGrade
+    set in_grade =
+		case
+			when in_avr >= 90.0 then 'A'
+			when in_avr >= 70.0 then 'B'
+			when in_avr >= 50.0 then 'C'
+			when in_avr >= 30.0 then 'D'
+            else 'F'
+		end;
+    -- insert into student() values();
+    insert into student(no, name, kor, eng, math)
+		values(in_no, in_name, in_kor, in_eng, in_math);
+    -- update student set (total, avr, grade) where id = ?;
+    update student set total = in_total, avr = in_avr, grade = in_grade
+		where no = in_no;
+end $$
+delimiter ;
+-- create trigger
+delimiter $$
+create trigger trg_deleteStudent
+	after delete
+    on student
+    for each row
+begin
+INSERT INTO `deleteStudent` VALUES(old.no, old.name, old.kor, old.eng, old.math, old.total,
+									old.avr, old.grade, old.rate);
+end;
+delimiter ;
+-- drop table if exists student;
+-- article table 삭제할 것
+-- drop table article;
+-- thisisjava database 삭제할 것
+-- drop database thisisjava;
